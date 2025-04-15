@@ -1,0 +1,1893 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "chatId": "={{ $('Handle any trigger in telegram').item.json.message.chat.id }}",
+        "text": "Chọn một hoặc nhiều chủ đề bạn muốn theo dõi, bấm 2 lần để hủy",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📰 Thời sự",
+                    "additionalFields": {
+                      "callback_data": "topic_news"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "⚽ Thể thao",
+                    "additionalFields": {
+                      "callback_data": "topic_sport"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "💻 Công nghệ",
+                    "additionalFields": {
+                      "callback_data": "topic_tech"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🎬 Giải trí",
+                    "additionalFields": {
+                      "callback_data": "topic_entertainment"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -260,
+        1749.5
+      ],
+      "id": "e552dfa4-df5a-4b7e-894a-e1e48d20df0c",
+      "name": "Send topic menu",
+      "webhookId": "b349bae4-6939-4395-afee-0e8da869eafa",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "08be7c0b-aca7-4a51-bdb3-5e5f38644cf9",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -920,
+        1560
+      ],
+      "id": "67ecaa9b-aeb2-4b71-a4b9-d3482a2aecb0",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8c323dac-ec72-41f6-a757-560c91291b6b",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": {},
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -260,
+        1960
+      ],
+      "id": "f5bc8602-06fc-424f-9ce8-318a720f6ab7",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ut.*\nFROM user_topics ut\nJOIN topics t ON ut.topic_id = t.id\nWHERE ut.user_id = (\n  SELECT id FROM users WHERE telegram_id = {{ $json.user_id }}\n)\nAND t.name = LOWER('{{ $json.topic_name }}');",
+        "options": {
+          "replaceEmptyStrings": false
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -480,
+        1960
+      ],
+      "id": "8443edbc-39ee-4a06-9699-d87ec3c8e4a6",
+      "name": "Check db for existence",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const map = {\n  topic_news: \"thời sự\",\n  topic_sport: \"thể thao\",\n  topic_tech: \"công nghệ\",\n  topic_entertainment: \"giải trí\"\n};\n\nconst data = $json.callback_query.data;\nconst topicName = map[data];\nconst userId = $json.callback_query.from.id;\n\nreturn [{\n  json: {\n    topic_name: topicName,\n    user_id: userId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        1960
+      ],
+      "id": "519d1d04-65fa-4e78-af03-087315a9b4d7",
+      "name": "format input for db checking"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM user_topics\nWHERE user_id = {{ $json.user_id }}\n  AND topic_id = (\n    SELECT id FROM topics WHERE name = LOWER('{{ $('format input for db checking').item.json.topic_name }}')\n  );",
+        "options": {
+          "replaceEmptyStrings": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -40,
+        1860
+      ],
+      "id": "d17ec505-77d6-4f55-a08e-43a2b11dfa90",
+      "name": "if user exist",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO users (telegram_id, username, first_name, last_name)\nVALUES ({{ $('format input for db checking').item.json.user_id }}, '{{ $('If').item.json.callback_query.from.first_name }}{{ $('If').item.json.callback_query.from.last_name }}', '{{ $('If').item.json.callback_query.from.first_name }}', '{{ $('If').item.json.callback_query.from.last_name }}');",
+        "options": {
+          "replaceEmptyStrings": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -40,
+        2160
+      ],
+      "id": "0750d446-a88f-4aba-a3de-6bae3ca37b92",
+      "name": "if user doesnt exist",
+      "alwaysOutputData": false,
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('format input for db checking').item.json.user_id }}",
+        "text": "=Xóa topic {{ $('format input for db checking').item.json.topic_name }} thành công!!",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        1860
+      ],
+      "id": "6c70cf69-8db1-47c5-a582-99778699828c",
+      "name": "Tin nhắn xóa thành công",
+      "webhookId": "82e167c3-cdf4-4fdd-9b07-1ca9463f1d30",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('format input for db checking').item.json.user_id }}",
+        "text": "=Thêm topic {{ $('format input for db checking').item.json.topic_name }} thành công!!",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        2160
+      ],
+      "id": "3102a0b8-2712-4768-874e-b2ad23bd73b2",
+      "name": "Tin nhắn thêm thành công",
+      "webhookId": "82e167c3-cdf4-4fdd-9b07-1ca9463f1d30",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT u.telegram_id, STRING_AGG(t.name, ', ') AS subscribed_topics\nFROM users u\nJOIN user_topics ut ON u.id = ut.user_id\nJOIN topics t ON ut.topic_id = t.id\nWHERE u.telegram_id = {{ $json.result.chat.id }}\nGROUP BY u.telegram_id;",
+        "options": {
+          "replaceEmptyStrings": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        1860
+      ],
+      "id": "acdaa11c-cb9b-4d7f-baa7-f2536aec520d",
+      "name": "if user exist1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT u.telegram_id, STRING_AGG(t.name, ', ') AS subscribed_topics\nFROM users u\nJOIN user_topics ut ON u.id = ut.user_id\nJOIN topics t ON ut.topic_id = t.id\nWHERE u.telegram_id = {{ $json.result.chat.id }}\nGROUP BY u.telegram_id;",
+        "options": {
+          "replaceEmptyStrings": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        620,
+        2160
+      ],
+      "id": "61980454-9eef-40a6-b0fe-3a523f447c1d",
+      "name": "if user exist2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Tin nhắn thêm thành công').item.json.result.chat.id }}",
+        "text": "=Đã đăng kí: {{ $json.subscribed_topics }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        840,
+        2160
+      ],
+      "id": "ed49c21c-34f5-4967-a6b9-21a8484666f8",
+      "name": "Tin nhắn thêm thành công1",
+      "webhookId": "82e167c3-cdf4-4fdd-9b07-1ca9463f1d30",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_id }}",
+        "text": "=Còn lại: {{ $json.subscribed_topics }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        840,
+        1760
+      ],
+      "id": "adfb941b-c219-43d0-ac45-1edf506e6709",
+      "name": "Tin nhắn thêm thành công2",
+      "webhookId": "82e167c3-cdf4-4fdd-9b07-1ca9463f1d30",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "08be7c0b-aca7-4a51-bdb3-5e5f38644cf9",
+              "leftValue": "={{ $json.subscribed_topics }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        620,
+        1860
+      ],
+      "id": "2d5ce926-1f99-456d-a391-8c432df5fbb2",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('format input for db checking').item.json.user_id }}",
+        "text": "=Không còn chủ đề nào đã đăng kí",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        840,
+        1960
+      ],
+      "id": "0f6f8b54-4ac7-4b6f-927e-c5c85a224b3d",
+      "name": "Tin nhắn thêm thành công3",
+      "webhookId": "82e167c3-cdf4-4fdd-9b07-1ca9463f1d30",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "*"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1140,
+        1560
+      ],
+      "id": "cb69a42e-93f6-4381-aa5f-8fb3e1476862",
+      "name": "Handle any trigger in telegram",
+      "webhookId": "236f05ca-8e64-4403-a67e-2dd423f56aaf",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f2dc913d-33c1-476c-843b-acfda47d17b0",
+                    "leftValue": "={{ $json.full_command }}",
+                    "rightValue": "/start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "start"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f47a4052-b723-4caa-89af-61e57d084ef1",
+                    "leftValue": "={{ $json.full_command }}",
+                    "rightValue": "/insertcontent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "insert content"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3500d0ca-3018-4220-88cd-6e05b18f64f0",
+                    "leftValue": "={{ $json.full_command }}",
+                    "rightValue": "/updatecontent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "update content"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0f8a3764-f8bf-4b34-9413-0abfe7c4dc13",
+                    "leftValue": "={{ $json.full_command }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "either"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -480,
+        1339
+      ],
+      "id": "9cb4d780-8c31-45d8-a16d-f7f3158ac420",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('If').item.json.message.chat.id }}",
+        "text": "=Xin chào, tôi là Phan Hà Bot 🤖 \nTôi có thể giúp bạn thực hiện các việc sau:\n💬 Nhắn bất kỳ tin nhắn nào để hiển thị danh sách chủ đề bạn có thể đăng ký.",
+        "replyMarkup": "inlineKeyboard",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -260,
+        649.5
+      ],
+      "id": "2c604796-859c-41a5-8d18-b1a6f6f04f17",
+      "name": "Send topic menu1",
+      "webhookId": "b349bae4-6939-4395-afee-0e8da869eafa",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH user_data AS (\n  SELECT\n    td.id,\n    t.name AS topic_name,\n    td.content,\n    td.created_at,\n    ROW_NUMBER() OVER (PARTITION BY u.telegram_id ORDER BY td.created_at DESC) AS row_num,\n    COUNT(*) OVER (PARTITION BY u.telegram_id) AS total_count\n  FROM topic_data td\n  JOIN users u ON td.user_id = u.id\n  JOIN topics t ON td.topic_id = t.id\n  WHERE u.telegram_id = {{ $('If').item.json.message.chat.id }}\n)\nSELECT\n  {{ $('If').item.json.message.chat.id }} AS telegram_id,\n  (\n    SELECT STRING_AGG(\n      'Chủ đề: ' || topic_name || E'\\n' ||\n      'ID: ' || id || E'\\n' ||\n      'Nội dung: ' || LEFT(content, 50) || '...',\n      E'\\n\\n'\n      ORDER BY created_at DESC\n    )\n    FROM user_data\n    WHERE row_num <= 2\n  ) || \n  CASE \n    WHEN (SELECT total_count FROM user_data LIMIT 1) > 2\n    THEN E'\\n\\n' || 'Còn ' || ((SELECT total_count FROM user_data LIMIT 1) - 2) || ' mục khác không được hiển thị.'\n    ELSE ''\n  END AS topic_content_summary;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        180,
+        649.5
+      ],
+      "id": "d030e1e8-9ed1-4e38-8332-9360e9ef372d",
+      "name": "Postgres",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_id }}",
+        "text": "=Bạn đang có những data sau:\n{{ $json.topic_content_summary }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        620,
+        560
+      ],
+      "id": "f143aa14-82a8-4ee9-9fcb-99e9e72cbc3d",
+      "name": "Telegram1",
+      "webhookId": "82d2f2df-e7b5-4772-b070-946d320a9769",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('If').item.json.message.chat.id }}",
+        "text": "=Hiện tại có 4 chủ đề bạn có thể chọn thời sự, thể thao, công nghệ, giải trí. Bạn có thể dễ dàng thêm và chỉnh sửa dữ liệu của mình bằng 2 cách sau:\n\n1. Thêm Mới (Insert) 📥\n   - /insertcontent \"Chủ đề\" / \"Nội dung của bạn ở đây\" \n2. Cập Nhật (Update) 🔄\n   - /updatecontent \"ID\" / \"Chủ đề\" / \"Nội dung mới của bạn ở đây\" ",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -40,
+        649.5
+      ],
+      "id": "c021e809-fd36-42b1-aea3-e333c5486197",
+      "name": "Telegram2",
+      "webhookId": "4e0a73a2-afd8-4411-8a53-696da3e50e11",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Code2').first().json.payload;\n\n// Xoá prefix command\nconst content = input.replace('/update_content', '').trim();\n\n// Tách theo dấu \"/\"\nconst parts = content.split('/');\n\nif (parts.length < 3) {\n  throw new Error('Error. Sai định dạng. Vui lòng dùng /updatecontent {id}/{chủ đề}/{nội dung mới}');\n}\n\nreturn [{\n  json: {\n    topic_data_id: parseInt(parts[0].trim()),\n    topic_name: parts[1].trim(),\n    new_content: parts.slice(2).join('/').trim(), // để hỗ trợ dấu \"/\" trong nội dung\n    telegram_id: $('Handle any trigger in telegram').first().json.message.chat.id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        1549.5
+      ],
+      "id": "d8e6d4bb-a34d-4bbf-b41e-d6eb5a081a40",
+      "name": "Code1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json.message.text;\n\nconst parts = input.split(' ');\n\nconst payload = parts.slice(1).join(' ').trim();\n\nreturn [{\n  json: {\n    full_command: parts[0], // \"/insert_content\"\n    payload: payload         // \"Thể thao/ronaldo là cầu thủ số 1 thế giới\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        1360
+      ],
+      "id": "a63d2f67-f4ac-4658-8ba9-daa6da003073",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO topic_data (topic_id, user_id, content)\nSELECT t.id, u.id, '{{$json.content}}'\nFROM users u, topics t\nWHERE u.telegram_id = {{$json.telegram_id}} AND t.name = LOWER('{{$json.topic_name}}');",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        180,
+        1049.5
+      ],
+      "id": "38f13854-fe9b-4813-b7b5-ac6de7f9d927",
+      "name": "Postgres2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json.payload;\nconst parts = input.split('/');\n\nif (parts.length < 2) {\n  throw new Error('Error. Sai định dạng. Vui lòng dùng /insertcontent {chủ đề}/{nội dung}');\n}\n\nreturn [{\n  json: {\n    topic_name: parts[0].trim(),\n    content: parts.slice(1).join('/').trim(), // để hỗ trợ dấu '/' trong nội dung\n    telegram_id: $('Handle any trigger in telegram').first().json.message.chat.id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        1149.5
+      ],
+      "id": "4a8d21b5-10a7-4784-8215-0e219e3e096e",
+      "name": "Code",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8c323dac-ec72-41f6-a757-560c91291b6b",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": {},
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        1049.5
+      ],
+      "id": "3e421249-428a-43f0-beb9-75446f30c58d",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Handle any trigger in telegram').item.json.message.chat.id }}",
+        "text": "Thêm thành công!!",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        620,
+        960
+      ],
+      "id": "508fca69-a25d-4e29-8e8a-ca5cb06c67f3",
+      "name": "Telegram3",
+      "webhookId": "7cd6bb15-f31e-4daf-8067-6a20954ae7ac",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Handle any trigger in telegram').item.json.message.chat.id }}",
+        "text": "={{ $json.error.description }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        620,
+        1160
+      ],
+      "id": "876fc68d-7421-466c-8140-7b94cc6448f0",
+      "name": "Telegram4",
+      "webhookId": "7cd6bb15-f31e-4daf-8067-6a20954ae7ac",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE topic_data\nSET content = '{{$json.new_content}}',\n    created_at = NOW()\nWHERE topic_id = {{$json.topic_data_id}}\n  AND user_id = (\n    SELECT id FROM users WHERE telegram_id = {{$json.telegram_id}}\n  );",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        180,
+        1449.5
+      ],
+      "id": "79e8ce41-ac75-469b-898d-627e38d406a9",
+      "name": "Postgres3",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8c323dac-ec72-41f6-a757-560c91291b6b",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": {},
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        1449.5
+      ],
+      "id": "843dbd71-3ec3-48ae-ba3d-8adbb4006d3c",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Handle any trigger in telegram').item.json.message.chat.id }}",
+        "text": "Sửa thành công!!",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        620,
+        1360
+      ],
+      "id": "f76f1f6d-e1b9-4b27-bfa3-083f34dcfc57",
+      "name": "Telegram8",
+      "webhookId": "7cd6bb15-f31e-4daf-8067-6a20954ae7ac",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Handle any trigger in telegram').item.json.message.chat.id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        620,
+        1560
+      ],
+      "id": "d03ebdc3-18fc-44ac-8dd7-d545664dd680",
+      "name": "Telegram9",
+      "webhookId": "7cd6bb15-f31e-4daf-8067-6a20954ae7ac",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e21b1040-f69c-44dd-8976-6ec50934bec0",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "Error",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -40,
+        1549.5
+      ],
+      "id": "379edf3c-08f4-4b58-971a-6173e350342e",
+      "name": "If5"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('If').item.json.message.from.id }}",
+        "text": "={{ $('Code1').item.json.error }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        1649.5
+      ],
+      "id": "13e4aa98-233b-4339-bf45-4ba777f0aabb",
+      "name": "Telegram11",
+      "webhookId": "6ff7c534-db70-45fd-879e-0aabb720964c",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f18238e6-a257-4f2d-8962-121b1b0aae33",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "Error",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -40,
+        1149.5
+      ],
+      "id": "85109a17-1ba0-4d9f-915f-f575a3cdd2c2",
+      "name": "If6"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('If').item.json.message.from.id }}",
+        "text": "={{ $json.error }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        1249.5
+      ],
+      "id": "a1c209db-237a-4766-b958-578cde48f332",
+      "name": "Telegram12",
+      "webhookId": "c35366e6-af25-402b-aae7-250c7010b1be",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO user_topics (user_id, topic_id)\nSELECT u.id, t.id\nFROM users u, topics t\nWHERE u.telegram_id = {{ $('format input for db checking').item.json.user_id }} AND t.name = LOWER('{{ $('format input for db checking').item.json.topic_name }}');",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        180,
+        2160
+      ],
+      "id": "fcb46201-d01b-4c29-99f6-ceb87efb8c7e",
+      "name": "Postgres6",
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2acf34a5-b70f-4080-aec0-dceb9b8ffae9",
+              "leftValue": "={{ $json.topic_content_summary }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        649.5
+      ],
+      "id": "731d24fe-6428-4e53-863a-4d02ca2eb392",
+      "name": "If7"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_id }}",
+        "text": "Bạn hiện không có data để show và bạn cũng không thể xem của người khác, nhưng đừng lo, bạn vẫn có thể thêm data của chính mình bằng cách làm như hướng dẫn và bạn vẫn sẽ được nhận thông báo khi người khác thêm hoặc cập nhật những chủ đề bạn quan tâm, bạn có thể thêm chủ đề quan tâm bằng cách bấm 1 phím bất kì",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        620,
+        760
+      ],
+      "id": "eabfa5d2-77bb-415d-8b3c-3fdb086f178e",
+      "name": "Telegram15",
+      "webhookId": "915010bb-cddd-4042-b4de-b23000d359c7",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "tableName": {
+          "__rl": true,
+          "value": "topic_data",
+          "mode": "list",
+          "cachedResultName": "topic_data"
+        },
+        "additionalFields": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1140,
+        2420
+      ],
+      "id": "2f9ab55c-3f53-4892-91a2-6d43bbd4ccce",
+      "name": "Postgres Trigger",
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic_id, content\nFROM topic_data\nWHERE id = (SELECT MAX(id) FROM topic_data);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -920,
+        2420
+      ],
+      "id": "d0ec7aac-6cad-4ffc-b3ed-1f57f1d968f3",
+      "name": "Postgres4",
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_id }}",
+        "text": "=📢 Nội dung mới cho chủ đề {{ $json.topic_name }}:\n\n{{ $json.content }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -260,
+        2420
+      ],
+      "id": "3a4201cf-995d-4465-b7f8-730482218382",
+      "name": "Telegram10",
+      "webhookId": "c375b624-1cd4-413e-9079-3dea865e53f2",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  u.telegram_id,\n  (SELECT name FROM topics WHERE id = {{$json.topic_id}}) as topic_name\nFROM user_topics ut\nJOIN users u ON u.id = ut.user_id\nWHERE ut.topic_id = {{$json.topic_id}}\nAND u.telegram_id IS NOT NULL;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -700,
+        2420
+      ],
+      "id": "05b9b005-e8e1-498c-b16a-b3506192ce36",
+      "name": "Postgres5",
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simply pass along the required fields\nreturn items.map(item => {\n  return {\n    telegram_id: item.json.telegram_id,\n    topic_id: $('Postgres4').first().json.topic_id,\n    content: $('Postgres4').first().json.content,\n    topic_name: item.json.topic_name\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        2420
+      ],
+      "id": "4fb03838-b7f1-4796-883a-b2b0022564e8",
+      "name": "Code3"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "tableName": {
+          "__rl": true,
+          "value": "topic_data",
+          "mode": "list",
+          "cachedResultName": "topic_data"
+        },
+        "firesOn": "UPDATE",
+        "additionalFields": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1140,
+        2680
+      ],
+      "id": "7fffd30b-cc79-40a9-9dd8-471a91816d75",
+      "name": "Postgres Trigger1",
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic_id, content\nFROM topic_data\nWHERE id = (SELECT MAX(id) FROM topic_data);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -920,
+        2680
+      ],
+      "id": "e9d85c34-43c3-4c52-9ed1-30b6c8e214b1",
+      "name": "Postgres7",
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_id }}",
+        "text": "=📢 Nội dung được sửa cho chủ đề {{ $json.topic_name }}:\n\n{{ $json.content }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -260,
+        2680
+      ],
+      "id": "34f5cc05-c831-41f2-a6d1-ca80bbaff970",
+      "name": "Telegram",
+      "webhookId": "c375b624-1cd4-413e-9079-3dea865e53f2",
+      "credentials": {
+        "telegramApi": {
+          "id": "CZ1kDQrnWA2Gfile",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  u.telegram_id,\n  (SELECT name FROM topics WHERE id = {{$json.topic_id}}) as topic_name\nFROM user_topics ut\nJOIN users u ON u.id = ut.user_id\nWHERE ut.topic_id = {{$json.topic_id}}\nAND u.telegram_id IS NOT NULL;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -700,
+        2680
+      ],
+      "id": "089da5a1-be34-44e5-afeb-f9d1ae870f5b",
+      "name": "Postgres8",
+      "credentials": {
+        "postgres": {
+          "id": "ZCElQekWDUgc27Jz",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simply pass along the required fields\nreturn items.map(item => {\n  return {\n    telegram_id: item.json.telegram_id,\n    topic_id: $('Postgres7').first().json.topic_id,\n    content: $('Postgres7').first().json.content,\n    topic_name: item.json.topic_name\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        2680
+      ],
+      "id": "587d78a4-429d-473d-a411-7c2feed225c9",
+      "name": "Code4"
+    }
+  ],
+  "pinData": {
+    "Handle any trigger in telegram": [
+      {
+        "json": {
+          "update_id": 676738330,
+          "callback_query": {
+            "id": "458595678174520083",
+            "from": {
+              "id": 6549226070,
+              "is_bot": false,
+              "first_name": "Phan",
+              "last_name": "Ha",
+              "language_code": "en"
+            },
+            "message": {
+              "message_id": 502,
+              "from": {
+                "id": 7535527841,
+                "is_bot": true,
+                "first_name": "testing1",
+                "username": "testingha68_bot"
+              },
+              "chat": {
+                "id": 6549226070,
+                "first_name": "Phan",
+                "last_name": "Ha",
+                "type": "private"
+              },
+              "date": 1744647328,
+              "text": "Chọn một hoặc nhiều chủ đề bạn muốn theo dõi, bấm 2 lần để hủy",
+              "reply_markup": {
+                "inline_keyboard": [
+                  [
+                    {
+                      "text": "📰 Thời sự",
+                      "callback_data": "topic_news"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "⚽ Thể thao",
+                      "callback_data": "topic_sport"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "💻 Công nghệ",
+                      "callback_data": "topic_tech"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "🎬 Giải trí",
+                      "callback_data": "topic_entertainment"
+                    }
+                  ]
+                ]
+              }
+            },
+            "chat_instance": "1040676401506580635",
+            "data": "topic_sport"
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Send topic menu": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "format input for db checking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "if user exist",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "if user doesnt exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check db for existence": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format input for db checking": {
+      "main": [
+        [
+          {
+            "node": "Check db for existence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if user exist": {
+      "main": [
+        [
+          {
+            "node": "Tin nhắn xóa thành công",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if user doesnt exist": {
+      "main": [
+        [
+          {
+            "node": "Postgres6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tin nhắn xóa thành công": {
+      "main": [
+        [
+          {
+            "node": "if user exist1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tin nhắn thêm thành công": {
+      "main": [
+        [
+          {
+            "node": "if user exist2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if user exist2": {
+      "main": [
+        [
+          {
+            "node": "Tin nhắn thêm thành công1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if user exist1": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Tin nhắn thêm thành công2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tin nhắn thêm thành công3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle any trigger in telegram": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Send topic menu1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send topic menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send topic menu1": {
+      "main": [
+        [
+          {
+            "node": "Telegram2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres": {
+      "main": [
+        [
+          {
+            "node": "If7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram1": {
+      "main": [
+        []
+      ]
+    },
+    "Telegram2": {
+      "main": [
+        [
+          {
+            "node": "Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres2": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Telegram3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres3": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Telegram8",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "Postgres3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If6": {
+      "main": [
+        [
+          {
+            "node": "Postgres2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres6": {
+      "main": [
+        [
+          {
+            "node": "Tin nhắn thêm thành công",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If7": {
+      "main": [
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Trigger": {
+      "main": [
+        [
+          {
+            "node": "Postgres4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres4": {
+      "main": [
+        [
+          {
+            "node": "Postgres5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres5": {
+      "main": [
+        [
+          {
+            "node": "Code3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code3": {
+      "main": [
+        [
+          {
+            "node": "Telegram10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Postgres7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres7": {
+      "main": [
+        [
+          {
+            "node": "Postgres8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres8": {
+      "main": [
+        [
+          {
+            "node": "Code4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code4": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fdaf4f0e-41d7-4ddd-b6c3-c379a36b2865",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "33c4d73f0de90c5c2a39c72ca2a076e611bed53d61e1542d51d17a7314d6a8f5"
+  },
+  "id": "SbmPkTnsiTgLAdZN",
+  "tags": []
+}
