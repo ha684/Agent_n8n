@@ -2,9 +2,10 @@
 
 A powerful AI agent built with modern technologies to assist with web search and conversations through Telegram.
 
-## 🎬 Demo
+## 📺 Demo Videos
 
-Check out the demo video: [Watch on YouTube](https://youtu.be/742NeoQdSH4)
+- [https://youtu.be/742NeoQdSH4](https://youtu.be/742NeoQdSH4)
+- [https://youtu.be/y9afu4Z6YwA](https://youtu.be/y9afu4Z6YwA)
 
 ## 🛠️ Tech Stack
 
